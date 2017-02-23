@@ -5,9 +5,11 @@ An object-oriented PHP Class that facilitates HTML creation.
 ##Why Use HTMLizer?
 * Keeps your PHP code neat, and the HTML you generate readable.
 * Creates HTML without spaces between tags, which makes your web pages smaller and solves at least [one CSS problem](https://css-tricks.com/fighting-the-space-between-inline-block-elements/).
-* It can parse properly-formatted maps into HTML, allowing for more dynamic content generation.
+* It can parse properly-formatted arrays into HTML, allowing for more dynamic content generation.
 
-Typically, integrating HTML requires a lot of concatenation:
+##Sample Uses
+
+Typically, integrating HTML requires a lot of condition checks and concatenation:
 
 ```php
 if ($title) {
@@ -27,31 +29,63 @@ if ($blurb) {
 }
 ```
 
+It gets even more complicated if you have to create HTML groups with sub-elements:
+
+```php
+$html = '';
+
+if ($title) {
+    $html .= '<h1 class="article-title">' . $title . '</h1>';
+}
+
+if ($blurb) {
+    $html .= '<p class="article-blurb">' . $blurb . '</p>';
+}
+
+if ($html) {
+    $html = '<article class="article-box">' . $html . '</article>';
+}
+```
+
 By default, HTMLizer doesn't create HTML tags if the specified content is empty.
 
 ```php
-// Empty strings are echoed.
+// Echoes an empty string.
+$h = new \HTML;
 $title = '';
 $blurb = '';
-echo \HTML::h1($title);
-echo \HTML::p($blurb);
+
+echo $h::article(
+    'class', 'article-box',
+    $h::h1('class', 'article-title', $title) . 
+    $h::p('class', 'article-blurb', $blurb)
+);
 
 /**
- * Echos
- * <h1>This is a title</h1>
- * <p>This is a sample blurb</p>
+ * Echoes (without spaces between tags) 
+ * <div class="article-box">
+ *      <h1 class="article-title">This is a title</h1>
+ *      <p class="article-blurb">This is a sample blurb</p>
+ * </div>
  */
 $title = 'This is a title';
 $blurb = 'This is a sample blurb';
-echo \HTML::h1($title);
-echo \HTML::p($blurb);
-```
 
+echo $h::article(
+    'class', 'article-box',
+    $h::h1('class', 'article-title', $title) . 
+    $h::p('class', 'article-blurb', $blurb)
+);
+```
 
 ##Creating HTML elements
 
-Use the name of the tag as the method name, and specify any HTML attributes and content as parameters. Note how the content
-is always the last parameter.
+Use the name of the tag as the method name, and specify any HTML attributes and content as parameters. The method returns either an:
+
+* HTML Element as a string: If the tag is self-closing, or if content was given.
+* Empty string: If the tag has a closing tag, and no content was given.
+
+Note how the content is always the last parameter.
 
 ```php
 /**
@@ -145,14 +179,35 @@ echo \HTML::div(array(
     'id' => 'my-id',
     '%content%' => 'This is some content',
 ));
+
 echo \HTML::div('class', 'my-class', 'id', 'my-id', 'This is some content');
 ```
 
 Yes, [switches](#switches) (`div_single_quote(array());`) will still work.
 
+###Using Different PHP Structures
+
+Any valid PHP array structure is acceptable, especially if it improves code readability.
+
+```php
+// Generates the same HTML
+echo \HTML::div(array(
+    'class' => 'my-class',
+    'id' => 'my-id',
+    '%content%' => 'This is some content',
+));
+
+echo \HTML::div([
+    'class' => 'my-class', 'id' => 'my-id',
+    '%content%' => 'This is some content',
+]);
+
+echo \HTML::div('class', 'my-class', 'id', 'my-id', 'This is some content');
+```
+
 ###Instantiation
 
-As a PHP Class, HTMLizer can be instantiated into a one-letter variable for even more readable code.
+As a PHP Class, HTMLizer can be instantiated into a short reusable variable for even more readable code.
 
 ```php
 $h = new \HTML;
@@ -174,11 +229,43 @@ echo $h::div(
         'It was a dark and stormy night, at least according to the beginning of the book.'
     )
 );
+
+echo $h::div(
+    ['class' => 'my-class'],
+    ['id' =>
 ```
 
 ##Creating Groups 
 
-You can create groups of HTML elements through the `group` method, nesting sub-elements inside the `'%content%'` key.
+You can create groups of HTML elements through the `group` method, nesting sub-elements inside the `'%content%'` key. Use this sample structure as a guide:
+
+```php
+array(
+    'tag' => array(
+        'attribute_name_1' => 'attribute_value',
+        'attribute_name_2' => 'attribute_value',
+        '%content%' => 'This is sample content',
+    ),
+    'tag_2' => array(
+        'attribute_name_1' => 'attribute_value',
+        'attribute_name_2' => 'attribute_value',
+        '%content%' => array(
+            'sub_tag_1' => array(
+                'attribute_name_1' => 'attribute_value',
+                'attribute_name_2' => 'attribute_value',
+                '%content%' => 'Nested content',
+            ),
+            'sub_tag_2' => array(
+                'attribute_name_1' => 'attribute_value',
+                'attribute_name_2' => 'attribute_value',
+                '%content%' => 'Nested content',
+            ),            
+        ),
+    ),
+);
+```
+
+###Examples
 
 ```php
 /**
@@ -208,9 +295,31 @@ echo \HTML::group(array(
 ));
 ```
 
+Again, you can use your desired PHP array structure for clarity or readability.
+
+```php
+echo \HTML::group([
+    'article' => [
+        'class' => 'article-box',
+        '%content%' => [
+            'h1' => [
+                'class' => 'article-title',
+                '%content%' => [
+                    'a' => ['href' => 'http://google.com', '%content%' => 'This is the Article Headline'],
+                ],
+            ],
+            'p' => [
+                'class' => 'article-blurb',
+                '%content%' => 'What happens if we use longer text as a sample? Will it serve our purpose of demonstration?',
+            ],
+        ],
+    ],
+]);
+```
+
 ###Using the Same Tag Repetitively
 
-Since PHP arrays require unique keys, you can add a numeric switch (like `_1`) after the tag names to differentiate them. These are ignored when the HTML element is built.
+Since PHP arrays must have unique keys, you can add a numeric switch (like `_1`) after the tag names to differentiate them. These are ignored when the HTML element is built.
 
 ```php
 /**
