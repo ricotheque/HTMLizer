@@ -230,9 +230,15 @@ echo $h::div(
     )
 );
 
-echo $h::div(
-    ['class' => 'my-class'],
-    ['id' =>
+echo $h::div([
+    'class' => 'my-class', 
+    'id' => 'my-id',
+    '%content%' => $h::p([
+        'class' => 'paragraph',
+        '%content%' => 'It was a dark and stormy night, at least according to the beginning of the book.'
+    ])
+);
+    
 ```
 
 ##Creating Groups 
